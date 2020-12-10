@@ -1,6 +1,5 @@
 import json
 import numpy as np
-from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression
 
 # Load the data
@@ -65,14 +64,33 @@ test_samples = samples[train_size:]
 train_labels = np.transpose(labels[:train_size])
 test_labels = np.transpose(labels[train_size:])
 
-print("Training classifiers for " + str(num_tags) + "most common tags\n")
+print("Training classifiers for " + str(num_tags) + " most common tags\n")
 
 # Train and test classifiers for each of the tags
-print('{:30} {:30} {:10}'.format("Tag:", "Number of recipes with tag:", "Accuracy:"))
+print('{:30} {:15} {:15} {:15} {:15}'.format("Tag:", "# with tag:", "Precision:", "Recall:", "Accuracy:"))
 for tag, test_label, train_label in zip(most_common_tags, test_labels, train_labels):
     clf = LogisticRegression(random_state=0, max_iter=1000).fit(train_samples, train_label)
-    print('{:30} {:30} {:.2f}%'.format(
+    predictions = clf.predict(test_samples)
+
+    true_neg = 0
+    true_pos = 0
+    false_pos = 0
+    false_neg = 0
+
+    for prediction, label in zip(predictions, test_label):
+        if prediction == 0 and label == 0:
+            true_neg += 1
+        elif prediction == 1 and label == 1:
+            true_pos += 1
+        elif prediction == 0 and label == 1:
+            false_neg += 1
+        else:
+            false_pos += 1
+
+    print('{:30} {:9} {:14.2f}% {:10.2f}% {:14.2f}%'.format(
         tags[str(tag[0])], 
         str(tag[1]), 
-        clf.score(test_samples, test_label)*100)
-        )
+        100 * true_pos / (true_pos + false_pos),
+        100 * true_pos / (true_pos + false_neg),
+        100 * (true_pos + true_neg) / len(predictions)
+        ))
