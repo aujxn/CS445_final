@@ -1,6 +1,27 @@
 import json
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+
+def score(predictions, labels): 
+    true_neg = 0
+    true_pos = 0
+    false_pos = 0
+    false_neg = 0
+    for prediction, label in zip(predictions, labels):
+        if prediction == 0 and label == 0:
+            true_neg += 1
+        elif prediction == 1 and label == 1:
+            true_pos += 1
+        elif prediction == 0 and label == 1:
+            false_neg += 1
+        else:
+            false_pos += 1
+    return {
+            "precision": 100 * true_pos / (true_pos + false_pos),
+            "recall": 100 * true_pos / (true_pos + false_neg),
+            "accuracy": 100 * (true_pos + true_neg) / len(predictions)
+           }
 
 # Load the data
 with open("recipes.json", "r") as file:
@@ -67,30 +88,24 @@ test_labels = np.transpose(labels[train_size:])
 print("Training classifiers for " + str(num_tags) + " most common tags\n")
 
 # Train and test classifiers for each of the tags
-print('{:30} {:15} {:15} {:15} {:15}'.format("Tag:", "# with tag:", "Precision:", "Recall:", "Accuracy:"))
+print('{:30} {:15} {:25} {:15} {:15}'.format("Tag:", "# with tag:", "(log/bayes) Precision:", "Recall:", "Accuracy:"))
 for tag, test_label, train_label in zip(most_common_tags, test_labels, train_labels):
-    clf = LogisticRegression(random_state=0, max_iter=1000).fit(train_samples, train_label)
-    predictions = clf.predict(test_samples)
+    log_reg_clf = LogisticRegression(random_state=0, max_iter=1000)
+    log_reg_clf.fit(train_samples, train_label)
+    bayes_clf = GaussianNB()
+    bayes_clf = bayes_clf.fit(train_samples, train_label)
 
-    true_neg = 0
-    true_pos = 0
-    false_pos = 0
-    false_neg = 0
+    logistic_regression_predictions = log_reg_clf.predict(test_samples)
+    naive_bayes_predictions = bayes_clf.predict(test_samples)
 
-    for prediction, label in zip(predictions, test_label):
-        if prediction == 0 and label == 0:
-            true_neg += 1
-        elif prediction == 1 and label == 1:
-            true_pos += 1
-        elif prediction == 0 and label == 1:
-            false_neg += 1
-        else:
-            false_pos += 1
+    logistic_regression_scores = score(logistic_regression_predictions, test_label)
+    naive_bayes_scores = score(naive_bayes_predictions, test_label)
 
-    print('{:30} {:9} {:14.2f}% {:10.2f}% {:14.2f}%'.format(
+    print('{:30} {:15} {:25} {:15} {:15}'.format(
         tags[str(tag[0])], 
         str(tag[1]), 
-        100 * true_pos / (true_pos + false_pos),
-        100 * true_pos / (true_pos + false_neg),
-        100 * (true_pos + true_neg) / len(predictions)
+        '{:05.2f}  {:05.2f}'.format(logistic_regression_scores['precision'], naive_bayes_scores['precision']),
+        '{:05.2f}  {:05.2f}'.format(logistic_regression_scores['recall'], naive_bayes_scores['recall']),
+        '{:05.2f}  {:05.2f}'.format(logistic_regression_scores['accuracy'], naive_bayes_scores['accuracy']),
         ))
+
